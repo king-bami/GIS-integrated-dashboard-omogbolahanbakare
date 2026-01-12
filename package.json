@@ -1,0 +1,24 @@
+{
+  "name": "gis-hospital-dashboard",
+  "version": "1.0.0",
+  "description": "GIS-Integrated Hospital Dashboard with PostGIS and Redis",
+  "scripts": {
+    "setup": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "init-db": "cd backend && npm run init-db",
+    "seed": "cd backend && npm run seed"
+  },
+  "keywords": [
+    "gis",
+    "postgis",
+    "hospital",
+    "ambulance",
+    "spatial",
+    "maplibre",
+    "react",
+    "nodejs"
+  ],
+  "author": "",
+  "license": "MIT"
+}
