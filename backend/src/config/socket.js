@@ -39,3 +39,9 @@ export const emitStatusUpdate = (updateData) => {
         io.emit('status_update', updateData);
     }
 };
+
+export const emitUnitAlert = (alertData) => {
+    if (io) {
+        io.emit('unit_alert', alertData);
+    }
+};

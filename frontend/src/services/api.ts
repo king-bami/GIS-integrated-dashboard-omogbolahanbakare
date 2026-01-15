@@ -21,6 +21,21 @@ export const hospitalsAPI = {
         return response.data;
     },
 
+    create: async (data: any) => {
+        const response = await api.post('/hospitals', data);
+        return response.data;
+    },
+
+    update: async (id: number, data: any) => {
+        const response = await api.put(`/hospitals/${id}`, data);
+        return response.data;
+    },
+
+    delete: async (id: number) => {
+        const response = await api.delete(`/hospitals/${id}`);
+        return response.data;
+    },
+
     findNearestAmbulance: async (id: number) => {
         const response = await api.get(`/hospitals/${id}/nearest-ambulance`);
         return response.data;
@@ -36,6 +51,21 @@ export const ambulancesAPI = {
 
     getById: async (id: number) => {
         const response = await api.get(`/ambulances/${id}`);
+        return response.data;
+    },
+
+    create: async (data: any) => {
+        const response = await api.post('/ambulances', data);
+        return response.data;
+    },
+
+    update: async (id: number, data: any) => {
+        const response = await api.put(`/ambulances/${id}`, data);
+        return response.data;
+    },
+
+    delete: async (id: number) => {
+        const response = await api.delete(`/ambulances/${id}`);
         return response.data;
     },
 
@@ -56,6 +86,11 @@ export const ambulancesAPI = {
 
     simulateMovement: async (id: number) => {
         const response = await api.post(`/ambulances/${id}/simulate-movement`);
+        return response.data;
+    },
+
+    sendAlert: async (id: number, message?: string) => {
+        const response = await api.post(`/ambulances/${id}/alert`, { message });
         return response.data;
     },
 };

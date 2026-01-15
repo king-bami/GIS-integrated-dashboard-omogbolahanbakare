@@ -1,6 +1,6 @@
 import { query } from '../config/database.js';
 import { cacheHelpers } from '../config/redis.js';
-import { emitAmbulanceUpdate, emitStatusUpdate } from '../config/socket.js';
+import { emitAmbulanceUpdate, emitStatusUpdate, emitUnitAlert } from '../config/socket.js';
 
 /**
  * Get all ambulances
@@ -170,7 +170,7 @@ export const updateAmbulanceStatus = async (req, res) => {
         const { id } = req.params;
         const { status } = req.body;
 
-        const validStatuses = ['available', 'on-call', 'off-duty', 'maintenance'];
+        const validStatuses = ['available', 'on-call', 'off-duty', 'maintenance', 'busy'];
         if (!validStatuses.includes(status)) {
             return res.status(400).json({
                 success: false,
@@ -284,5 +284,141 @@ export const simulateMovement = async (req, res) => {
             success: false,
             error: 'Failed to simulate movement'
         });
+    }
+};
+
+/**
+ * Create a new ambulance
+ */
+export const createAmbulance = async (req, res) => {
+    try {
+        const { vehicle_number, driver_name, phone, status, equipment, latitude, longitude } = req.body;
+
+        const result = await query(`
+      INSERT INTO ambulances (vehicle_number, driver_name, phone, status, equipment, location)
+      VALUES ($1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326)::geography)
+      RETURNING *, ST_Y(location::geometry) as latitude, ST_X(location::geometry) as longitude
+    `, [vehicle_number, driver_name, phone, status || 'available', equipment, longitude, latitude]);
+
+        await cacheHelpers.del('ambulances:all');
+        await cacheHelpers.flush(); // Real-time updates might affect proximity
+
+        // Broadcast new ambulance
+        emitAmbulanceUpdate(result.rows[0]);
+
+        res.status(201).json({
+            success: true,
+            message: 'Ambulance created successfully',
+            data: result.rows[0]
+        });
+    } catch (error) {
+        console.error('Error creating ambulance:', error);
+        res.status(500).json({ success: false, error: 'Failed to create ambulance' });
+    }
+};
+
+/**
+ * Update an ambulance (full update)
+ */
+export const updateAmbulance = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { vehicle_number, driver_name, phone, status, equipment, latitude, longitude } = req.body;
+
+        const result = await query(`
+      UPDATE ambulances
+      SET 
+        vehicle_number = COALESCE($1, vehicle_number),
+        driver_name = COALESCE($2, driver_name),
+        phone = COALESCE($3, phone),
+        status = COALESCE($4, status),
+        equipment = COALESCE($5, equipment),
+        location = CASE 
+          WHEN $6::float IS NOT NULL AND $7::float IS NOT NULL 
+          THEN ST_SetSRID(ST_MakePoint($7, $6), 4326)::geography 
+          ELSE location 
+        END,
+        last_updated = CURRENT_TIMESTAMP
+      WHERE id = $8
+      RETURNING *, ST_Y(location::geometry) as latitude, ST_X(location::geometry) as longitude
+    `, [vehicle_number, driver_name, phone, status, equipment, latitude, longitude, id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Ambulance not found' });
+        }
+
+        await cacheHelpers.del('ambulances:all');
+        await cacheHelpers.flush();
+
+        // Broadcast update
+        emitAmbulanceUpdate(result.rows[0]);
+
+        res.json({
+            success: true,
+            message: 'Ambulance updated successfully',
+            data: result.rows[0]
+        });
+    } catch (error) {
+        console.error('Error updating ambulance:', error);
+        res.status(500).json({ success: false, error: 'Failed to update ambulance' });
+    }
+};
+
+/**
+ * Delete an ambulance
+ */
+export const deleteAmbulance = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await query('DELETE FROM ambulances WHERE id = $1 RETURNING id', [id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Ambulance not found' });
+        }
+
+        await cacheHelpers.del('ambulances:all');
+        await cacheHelpers.flush();
+
+        res.json({
+            success: true,
+            message: 'Ambulance deleted successfully',
+            id: id
+        });
+    } catch (error) {
+        console.error('Error deleting ambulance:', error);
+        res.status(500).json({ success: false, error: 'Failed to delete ambulance' });
+    }
+};
+
+/**
+ * Send an urgent alert to an ambulance unit
+ */
+export const alertAmbulance = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { message } = req.body;
+
+        const result = await query('SELECT id, vehicle_number FROM ambulances WHERE id = $1', [id]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Ambulance not found' });
+        }
+
+        const ambulance = result.rows[0];
+
+        // Broadcast pulse-alert via socket
+        emitUnitAlert({
+            id: ambulance.id,
+            vehicleNumber: ambulance.vehicle_number,
+            message: message || 'URGENT DISPATCH ALERT RECEIVED',
+            timestamp: new Date().toISOString()
+        });
+
+        res.json({
+            success: true,
+            message: `Urgent alert broadcasted to Unit ${ambulance.vehicle_number}`
+        });
+    } catch (error) {
+        console.error('Error sending alert:', error);
+        res.status(500).json({ success: false, error: 'Failed to send alert' });
     }
 };

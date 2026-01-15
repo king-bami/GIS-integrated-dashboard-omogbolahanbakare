@@ -26,6 +26,7 @@ export interface Ambulance {
     created_at: string;
     distanceMeters?: number;
     distanceKm?: number;
+    etaMinutes?: number;
 }
 
 export interface NearestAmbulanceResponse {
@@ -36,6 +37,7 @@ export interface NearestAmbulanceResponse {
         longitude: number;
     };
     nearestAmbulance: Ambulance | null;
+    nearbyAmbulances?: Ambulance[];
     message?: string;
 }
 

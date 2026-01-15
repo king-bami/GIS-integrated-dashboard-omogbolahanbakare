@@ -1,181 +1,75 @@
-# 🏥 GIS-Integrated Hospital Dashboard
+## Tech Stack
 
-A full-stack web application that visualizes hospital locations and ambulance proximity using spatial queries, built with React, MapLibre GL JS, Node.js, PostgreSQL with PostGIS, and Redis caching.
+- **GIS**: PostGIS, MapLibre GL
+- **Frontend**: React, TypeScript, Lucide, GSAP
+- **Backend**: Node.js, Express, Socket.io, Redis
+- **DevOps**: Docker, Docker-Compose
 
-![Dashboard Preview](https://img.shields.io/badge/Status-Production%20Ready-success)
-![License](https://img.shields.io/badge/License-MIT-blue)
+# Medical Command Center
 
-## 📋 Table of Contents
+**Medical Command Center** is a high performance, real time emergency response dashboard designed to visualize hospital facilities and coordinate ambulance dispatches using advanced geospatial logic.
 
-- [Overview](#overview)
-- [Features](#features)
-- [Architecture](#architecture)
-- [Tech Stack](#tech-stack)
-- [Prerequisites](#prerequisites)
-- [Installation](#installation)
-- [Running the Application](#running-the-application)
-- [API Documentation](#api-documentation)
-- [Learning Log](#learning-log)
-- [Project Structure](#project-structure)
-- [Future Enhancements](#future-enhancements)
+## Architecture
+**Frontend**: React (Vite) + TypeScript. Uses **MapLibre GL JS** for vector map rendering and **GSAP** for mission critical animations.
+**Backend**: Node.js (Express) serving a RESTful API and a **Socket.io** event hub.
+**Database**: PostgreSQL with the **PostGIS** extension for spherical geographic calculations.
+**Caching**: Dual layer architecture (Redis with an In Memory fallback) to optimize repeated proximity requests ("Grit" Challenge).
 
-## 🎯 Overview
 
-This project is a technical assessment demonstrating advanced full-stack development skills, including:
 
-- **Spatial Database Management**: PostgreSQL with PostGIS for efficient geographic queries
-- **Intelligent Caching**: Redis-based caching layer to optimize repeated proximity requests
-- **Interactive Mapping**: React-based frontend with MapLibre GL JS for real-time visualization
-- **RESTful API**: Express.js backend with comprehensive endpoints
-- **Modern UI/UX**: Premium dark-themed interface with smooth animations
+## Setup &  How to run the project
 
-## ✨ Features
-
-### Core Features
-- ✅ **Interactive Map**: Display 10+ hospitals and 5 ambulances on an interactive map
-- ✅ **Spatial Proximity Queries**: Find nearest ambulance using PostGIS spatial functions
-- ✅ **Intelligent Caching**: Redis caching prevents redundant database queries
-- ✅ **Ambulance Simulation**: Update ambulance locations via API to simulate movement
-- ✅ **Real-time WebSocket Updates**: Instant map updates when ambulance locations change without polling
-- ✅ **Request Logging**: Track all proximity requests in the database
-
-### Additional Features (Going Beyond Requirements)
-- 🎨 **Premium UI Design**: Modern dark theme with glassmorphism and gradient accents
-- 📊 **Dashboard Statistics**: Real-time stats showing hospital and ambulance counts
-- 🔍 **Visual Route Display**: Line drawing between selected hospital and nearest ambulance
-- ⚡ **Cache Indicators**: Visual feedback showing when results are served from cache
-- 📱 **Responsive Design**: Works seamlessly on desktop, tablet, and mobile devices
-- 🎯 **Interactive Markers**: Custom emoji markers with hover effects and popups
-
-## 🏗️ Architecture
-
-```
-┌─────────────────┐
-│   React Frontend│
-│   (MapLibre GL) │
-└────────┬────────┘
-         │ HTTP/REST / WebSocket
-         ▼
-┌─────────────────┐
-│  Express.js API │
-│   (Node.js)     │
-└────┬───────┬────┘
-     │       │
-     │       └──────────┐
-     ▼                  ▼
-┌─────────┐      ┌──────────┐
-│PostgreSQL│      │  Redis   │
-│ PostGIS  │      │  Cache   │
-└──────────┘      └──────────┘
-```
-
-## 🛠️ Tech Stack
-
-### Frontend
-- **React 18** with TypeScript
-- **MapLibre GL JS** - Open-source mapping library
-- **Socket.io Client** - Real-time updates
-- **Axios** - HTTP client
-- **Vite** - Build tool and dev server
-- **CSS3** - Custom styling with modern features
-
-### Backend
-- **Node.js** with Express.js
-- **Socket.io** - Real-time WebSocket communication
-- **PostgreSQL 14+** with PostGIS extension
-- **Redis** - In-memory caching
-- **pg** - PostgreSQL client
-- **CORS** - Cross-origin resource sharing
-
-## 📦 Prerequisites
-
-Before you begin, ensure you have the following installed locally:
-
-- **Node.js** (v18 or higher)
-- **PostgreSQL** (v14 or higher) with **PostGIS** extension
-- **Redis** (v6 or higher)
-- **npm** package manager
-
-## 🚀 Installation & Setup
-
-### 1. Database Setup
-
-1. Create a database named `hospital_dashboard`:
+## Option 1: Docker (Fastest)
+The entire stack is containerized for instant deployment.
 ```bash
-psql -U postgres -c "CREATE DATABASE hospital_dashboard;"
+docker-compose up --build
 ```
+*The dashboard will be available at `http://localhost:5173`.*
 
-### 2. Configure Backend
+## Option 2: Manual Development Setup
 
-1. Navigate to the backend directory:
+#### 1. Database
+Ensure PostgreSQL and PostGIS are installed.
+#### 2. Backend
 ```bash
 cd backend
 npm install
+# i have add the necessities in the .env file (DATABASE_URL, etc.)
+npm run init-db  # Initializes PostGIS extension and tables
+npm run seed     # Injects 10 mock hospitals and 5 ambulances
+npm run dev
 ```
 
-2. Create a `.env` file from the template:
-```bash
-cp .env.example .env
-```
-Update `backend/.env` with your local PostgreSQL and Redis details.
-
-3. Initialize the spatial database and seed with data:
-```bash
-npm run init-db
-npm run seed
-```
-
-### 3. Configure Frontend
-
-1. Navigate to the frontend directory:
-```bash
+#### 3. Frontend
 cd frontend
 npm install
-```
-
-## 🎮 Running the Application
-
-**Terminal 1 (Backend):**
-```bash
-cd backend
 npm run dev
-```
-
-**Terminal 2 (Frontend):**
-```bash
-cd frontend
-npm run dev
-```
-
-The application will be live at `http://localhost:5173`.
-
-## 📚 API Documentation
-
-### Hospitals
-- `GET /api/hospitals`: Get all hospitals
-- `GET /api/hospitals/:id/nearest-ambulance`: Find nearest available ambulance (Uses PostGIS + Redis Cache)
-
-### Ambulances
-- `GET /api/ambulances`: Get all ambulances
-- `POST /api/ambulances/:id/simulate-movement`: Simulates random movement and broadcasts via WebSocket
-
-## 📖 Learning Log
-
-### Most Challenging Bug: PostGIS Geography vs Geometry Types
-
-**The Problem:**
-Initially, I used the `geometry` type for location columns. While this worked for flat planes, `ST_Distance` returned results in "degrees" instead of meters/kilometers. This led to incorrect proximity sorting and unreadable distance values.
-
-**The Solution:**
-I refactored the database schema to use the `geography` type.
-```sql
-location GEOGRAPHY(POINT, 4326)
-```
-This ensured that `ST_Distance` automatically utilized spherical calculations, returning accurate real-world distances in meters. It also allowed the use of the `<->` KNN operator for efficient nearest-neighbor searches at scale.
-
-**Key Learning:**
-Always use `geography` for real-world distances and `geometry` for planar/projected coordinates when accuracy over large distances is required.
 
 ---
 
-Built as a technical assessment for the GIS-Integrated Hospital Dashboard project.
+## Testing the Operations
+
+1. **Target Selection**: Click on any hospital to trigger the spatial proximity engine.
+2. **Optimal Vector**: Review the calculated distance and ETA. The system will automatically highlight the recommended unit.
+3. **Verify Caching**: Click the same hospital again immediately. Observe the **"OPTIMIZED (CACHE)"** badge in the Fleet Status widget, this demonstrates the logic saving layer.
+4. **Real-time Dispatch**: Click "Authorize Dispatch". Observe the transition to "Mission Active" and watch the unit move live on the map.
+
+
+
+## Infrastructure Troubleshooting
+
+### Geospatial DB (PostGIS)
+- **Error**: `extension postgis not found`.
+- **Fix**: Ensure PostGIS is installed on your system. The `init-db` script attempted `CREATE EXTENSION IF NOT EXISTS postgis`. On Windows, use the Stack Builder to add PostGIS to your Postgres installation.
+
+### Persistence (Redis)
+- **Status**: Redis is used for high-performance caching.
+- **Failover**: If Redis is not detected, the backend will log `Redis not found. Using internal memory cache.` The application features a 100% functional fallback to in-memory caching to ensure stability.
+
+
+---
+
+## Evaluation Deliverables
+
+- **Learning Log**: A detailed report on the "Vanishing Ambulance" bug and architectural trade offs. [**Read the Learning Log here**](./LEARNING_LOG.md).
+- **Documentation**: This README serves as the primary system guide.

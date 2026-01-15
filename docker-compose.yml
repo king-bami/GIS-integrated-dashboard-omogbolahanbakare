@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  # 1. Spatial Database
+  db:
+    image: postgis/postgis:15-3.3
+    container_name: hospital_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+      POSTGRES_DB: hospital_gis
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 2. Caching Layer
+  redis:
+    image: redis:alpine
+    container_name: hospital_cache
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  # 3. Backend API
+  backend:
+    build: ./backend
+    container_name: hospital_api
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - DATABASE_URL=postgres://postgres:postgrespassword@db:5432/hospital_gis
+      - REDIS_URL=redis://redis:6379
+      - NODE_ENV=production
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    command: >
+      sh -c "npm run db:init && npm run db:seed && npm start"
+
+  # 4. Frontend Application
+  frontend:
+    build: ./frontend
+    container_name: hospital_ui
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:3001/api
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  redis_data:
