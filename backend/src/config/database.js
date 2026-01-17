@@ -10,7 +10,7 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   max: 20,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 5000, // Increased timeout for hosted DB
+  connectionTimeoutMillis: 30000, // Increased timeout to 30s for stability
   ssl: { rejectUnauthorized: false }
 });
 

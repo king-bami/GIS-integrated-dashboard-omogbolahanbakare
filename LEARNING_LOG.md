@@ -9,3 +9,4 @@ Another challenge I encountered was performance. Running spatial queries repeate
 On the frontend, connecting backend spatial logic to a map visualization helped validate the correctness of my implementation. Seeing the hospital, ambulance, and connecting line on the map made it easier to confirm that the nearest ambulance logic was working as expected.
 
 This project deepened my understanding of geospatial systems, spatial indexing, and performance conscious backend design. It also reinforced the importance of choosing the right data structures and database tools when working with location based systems.
+ 
